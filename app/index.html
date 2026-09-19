@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>技術用語ガイド</title>
+<style>
+  :root { --bg:#f6f5f1; --panel:#fff; --ink:#1f2328; --sub:#6b7280; --line:#e3e1da; --accent:#2f6f5e; --unknown:#9a6b16; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.7 -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 20px 16px 90px; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  .lead { color: var(--sub); font-size: 14px; margin: 0 0 16px; }
+  .controls { background: var(--panel); border:1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 18px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  button, select, input[type=text] { font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 8px; border:1px solid var(--line); background:#fff; color:var(--ink); }
+  button { cursor:pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color:#fff; }
+  button.ghost { border:none; background:none; color: var(--sub); padding: 4px 6px; font-size: 13px; text-decoration: underline; }
+  button:disabled { opacity:.45; cursor:default; }
+  .controls label { font-size: 13px; color: var(--sub); }
+  .row { flex: 1 1 100%; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .row input { flex:1; min-width: 0; }
+  #status { font-size: 13px; color: var(--sub); flex: 1 1 100%; }
+  details { flex: 1 1 100%; font-size: 13px; color: var(--sub); }
+  details summary { cursor:pointer; }
+  .card { background: var(--panel); border:1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; animation: pop .35s ease-out; }
+  .card.unknown { border-left-color: var(--unknown); }
+  .card h2 { font-size: 18px; margin: 0 0 2px; display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
+  .badge { font-size: 11px; font-weight: normal; padding: 1px 8px; border-radius: 999px; border:1px solid var(--line); color: var(--sub); margin-left: 8px; white-space: nowrap; vertical-align: middle; }
+  .card time { font-size: 12px; color: var(--sub); font-weight: normal; white-space:nowrap; }
+  .card p { margin: 0; }
+  .card .foot { margin-top: 6px; display:flex; gap:12px; align-items:center; font-size: 13px; }
+  .card .foot a { color: var(--accent); }
+  .card .debug { margin-top: 6px; font-size: 12px; color: var(--sub); }
+  .empty { color: var(--sub); text-align:center; padding: 36px 0; }
+  #live { position: fixed; left:0; right:0; bottom:0; background: rgba(31,35,40,.92); color:#fff; font-size: 13px; line-height: 1.5; padding: 8px 16px; height: calc(3em + 16px); overflow: hidden; display:flex; flex-direction: column-reverse; }
+  .card textarea { width:100%; margin-top:8px; font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 8px; border:1px solid var(--line); resize: vertical; min-height: 64px; }
+  .card .actions { margin-top: 6px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .card .actions button { font-size: 13px; padding: 6px 10px; }
+  .note { font-size: 12px; color: var(--sub); }
+  #live .interim { opacity:.6; }
+  @keyframes pop { from { transform: translateY(-6px); opacity:0; } to { transform:none; opacity:1; } }
+  @media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>技術用語ガイド</h1>
+  <p class="lead">動画やセミナーを聞きながら開いておくと、出てきた技術用語のひとこと解説がここに流れます。</p>
+
+  <section class="controls">
+    <button class="primary" id="startTab">聞いているタブの音声で開始</button>
+    <button id="stop" disabled>停止</button>
+    <label>解説を出すレベル
+      <select id="minLevel">
+        <option value="1" selected>初級から全部</option>
+        <option value="2">中級以上</option>
+        <option value="3">上級のみ</option>
+      </select>
+    </label>
+    <label>同じ用語の再表示まで
+      <select id="cooldown"><option value="5">5分</option><option value="10" selected>10分</option><option value="20">20分</option></select>
+    </label>
+    <div id="status">待機中 — 「開始」を押すと共有ダイアログが出ます。動画やセミナーを再生しているタブを選び、「タブの音声も共有」をオンにしてください。</div>
+    <details>
+      <summary>その他の操作</summary>
+      <div class="row" style="margin-top:8px">
+        <button id="startMic">マイクで開始(スピーカーの音を拾う)</button>
+        <button id="clearKnown">「もう知ってる」をリセット</button>
+        <label><input type="checkbox" id="detectUnknown" checked> 用語集にない専門用語も拾う</label>
+        <label><input type="checkbox" id="debug"> 判定の詳細を表示</label>
+        <span id="stats" class="note"></span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="addTitle" placeholder="用語集に自分で追加: 用語(例: オーケストレーション)" style="flex:1 1 180px">
+        <input type="text" id="addBody" placeholder="解説(調べた内容のコピペでもOK)" style="flex:3 1 260px">
+        <button id="addTerm">用語集に登録</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="tryText" placeholder="音声なしで試す: 例) 今日はRAGとMCPの話をします">
+        <button id="trySend">送信</button>
+      </div>
+    </details>
+  </section>
+
+  <div id="cards"><p class="empty">まだ用語は出ていません。</p></div>
+</main>
+<div id="live" hidden></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const cardsEl = $("cards"), statusEl = $("status"), liveEl = $("live");
+
+// 聞き手ごとの状態はすべてブラウザ側で持つ。localStorageが使えない環境でも動くようにする
+const store = {
+  get(k, fallback) { try { return JSON.parse(localStorage.getItem(k)) ?? fallback; } catch (e) { return fallback; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let known = new Set(store.get("knownTerms", []));
+const lastShown = {};      // 用語キー → 最後に表示した時刻
+let context = "";          // 直前の発話(判別の手がかりとしてサーバーに渡す)
+let cardCount = 0;
+const LEVEL_NAMES = { 1: "初級", 2: "中級", 3: "上級" };
+
+function link(text, url) {
+  const a = document.createElement("a");
+  a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = text;
+  return a;
+}
+
+async function postJSON(path, body) {
+  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return res.json();
+}
+
+function showCard(term, heard, latency) {
+  if (cardCount++ === 0) cardsEl.innerHTML = "";
+  const el = document.createElement("article");
+  el.className = "card" + (term.kind === "unknown" ? " unknown" : "");
+  const h2 = document.createElement("h2");
+  const name = document.createElement("span"); name.textContent = term.title;
+  if (term.level) {
+    const badge = document.createElement("span"); badge.className = "badge";
+    badge.textContent = LEVEL_NAMES[term.level];
+    name.append(badge);
+  }
+  h2.append(name);
+  const t = document.createElement("time");
+  t.textContent = new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  h2.append(t);
+  const p = document.createElement("p"); p.textContent = term.body;
+  const foot = document.createElement("div"); foot.className = "foot";
+  const q = encodeURIComponent(term.title + " とは");
+  const mute = document.createElement("button");
+  mute.className = "ghost"; mute.textContent = "もう知ってる(今後出さない)";
+  mute.onclick = () => { known.add(term.key); store.set("knownTerms", [...known]); el.remove(); };
+  foot.append(link("もっと調べる", "https://www.google.com/search?q=" + q), mute);
+  el.append(h2, p, foot);
+
+  if (term.kind === "unknown") {
+    // 用語集にない語: 調べた内容を自分で書いて、用語集に登録できる
+    const ta = document.createElement("textarea");
+    ta.placeholder = "「もっと調べる」で調べて、分かったことをここに書く(コピペでもOK)と、用語集に登録できます";
+    const actions = document.createElement("div"); actions.className = "actions";
+    const add = document.createElement("button"); add.className = "primary"; add.textContent = "用語集に登録";
+    const note = document.createElement("span"); note.className = "note";
+    add.onclick = async () => {
+      if (!ta.value.trim()) { note.textContent = "解説を入力してください"; return; }
+      const data = await postJSON("/glossary/add", { title: term.title, body: ta.value, level: Number($("minLevel").value) }).catch(() => ({ error: "サーバーに接続できません" }));
+      if (data.error) { note.textContent = data.error; return; }
+      p.textContent = data.term.short;
+      el.classList.remove("unknown"); ta.remove(); actions.remove();
+      const done = document.createElement("span"); done.className = "note"; done.textContent = "用語集に登録しました。次からはこの解説が出ます。";
+      el.append(done);
+    };
+    actions.append(add, note);
+    el.append(ta, actions);
+  }
+  if ($("debug").checked) {
+    const d = document.createElement("div"); d.className = "debug";
+    d.textContent = `聞き取り: 「${heard}」 / 確率 ${term.p.toFixed(2)} / Jev ${latency}秒`;
+    el.append(d);
+  }
+  cardsEl.prepend(el);
+}
+
+async function handleUtterance(text) {
+  if (!text.trim()) return;
+  const ctx = context;
+  context = (context + text).slice(-400);
+  try {
+    const res = await fetch("/judge", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, context: ctx, min_level: Number($("minLevel").value), detect_unknown: $("detectUnknown").checked }),
+    });
+    const data = await res.json();
+    if (data.error) { statusEl.textContent = "判定エラー: " + data.error; return; }
+    const cooldownMs = Number($("cooldown").value) * 60 * 1000, now = Date.now();
+    for (const term of data.terms) {
+      if (known.has(term.key)) continue;
+      if (now - (lastShown[term.key] || 0) < cooldownMs) continue;
+      lastShown[term.key] = now;
+      showCard(term, text, data.latency);
+    }
+  } catch (e) { statusEl.textContent = "判定サーバーに接続できません"; }
+}
+
+// 設定は次回も引き継ぐ
+for (const id of ["minLevel", "cooldown"]) {
+  const saved = store.get("setting:" + id, null);
+  if (saved !== null) $(id).value = saved;
+  $(id).onchange = () => store.set("setting:" + id, $(id).value);
+}
+$("detectUnknown").checked = store.get("setting:detectUnknown", true);
+$("detectUnknown").onchange = () => store.set("setting:detectUnknown", $("detectUnknown").checked);
+fetch("/stats").then((r) => r.json()).then((d) => {
+  $("stats").textContent = `用語集 ${d.total}語(初級${d.by_level[1]} / 中級${d.by_level[2]} / 上級${d.by_level[3]})`;
+}).catch(() => {});
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null, running = false, track = null, shared = null;
+
+function start(audioTrack) {
+  if (!SR) { statusEl.textContent = "このブラウザは音声認識に対応していません。ChromeかEdgeで開いてください。"; return; }
+  recognition = new SR();
+  recognition.lang = "ja-JP";
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  // Chromeは息継ぎを検知するまで結果を確定しない。早口で途切れなく話されると、30秒〜1分ぶんが
+  // まとめて確定して、カードが遅れて一気に出る。そこで、途中の結果(灰色の文字)のうち、
+  // まだ判定に送っていない部分を、一定の長さか時間ごとに先に送る。途中の結果は末尾の数語が
+  // 言い直しで変わることがあるが、先頭側は安定している。同じ用語の二重表示はクールダウンが防ぐ。
+  const EARLY_CHARS = 50, EARLY_MS = 3000, EARLY_MIN = 12;
+  let sentUpTo = 0, lastEarly = 0;
+  const sendEarly = (interim) => {
+    if (interim.length < sentUpTo) sentUpTo = 0;   // 途中の結果が短く書き換わったら、最初からやり直す
+    const fresh = interim.length - sentUpTo;
+    const due = fresh >= EARLY_CHARS || (fresh >= EARLY_MIN && Date.now() - lastEarly >= EARLY_MS);
+    if (!due) return;
+    handleUtterance(interim.slice(sentUpTo));
+    sentUpTo = interim.length; lastEarly = Date.now();
+  };
+  recognition.onresult = (ev) => {
+    let interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const text = ev.results[i][0].transcript;
+      if (ev.results[i].isFinal) {
+        // 確定した文のうち、途中の段階でまだ送っていない残りだけを送る
+        handleUtterance(text.length > sentUpTo ? text.slice(sentUpTo) : text);
+        sentUpTo = 0; lastEarly = Date.now();
+        liveEl.textContent = text.slice(-120);
+      } else {
+        interim += text;
+      }
+    }
+    if (interim) {
+      const span = document.createElement("span"); span.className = "interim"; span.textContent = interim.slice(-120);
+      liveEl.replaceChildren(span);
+      sendEarly(interim);
+    }
+  };
+  recognition.onerror = (ev) => { if (ev.error !== "no-speech") statusEl.textContent = "音声認識エラー: " + ev.error; };
+  // Chromeは無音が続くと認識を止めるので、実行中は自動で再開する
+  recognition.onend = () => { if (running) { try { track ? recognition.start(track) : recognition.start(); } catch (e) {} } };
+  try {
+    audioTrack ? recognition.start(audioTrack) : recognition.start();
+  } catch (e) {
+    statusEl.textContent = "開始できませんでした: " + e.message + " — タブ音声の認識はChromeの新しい機能です。Chromeを最新版に更新してお試しください。";
+    return;
+  }
+  running = true; track = audioTrack || null;
+  liveEl.hidden = false;
+  statusEl.textContent = audioTrack ? "タブの音声を聞き取り中" : "マイクで聞き取り中";
+  $("startTab").disabled = $("startMic").disabled = true; $("stop").disabled = false;
+  if (track) track.onended = stop;   // 共有を止めたら認識も止める
+}
+
+function stop() {
+  running = false;
+  recognition && recognition.stop();
+  shared && shared.getTracks().forEach((t) => t.stop()); shared = null; track = null;
+  statusEl.textContent = "停止しました";
+  $("startTab").disabled = $("startMic").disabled = false; $("stop").disabled = true;
+}
+
+$("startTab").onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    const audio = stream.getAudioTracks()[0];
+    // 映像トラックを止めると共有ごと終わるブラウザがあるため、停止時にまとめて止める
+    if (!audio) { stream.getTracks().forEach((t) => t.stop()); statusEl.textContent = "音声が共有されませんでした。共有ダイアログで「タブ」を選び、「タブの音声も共有」をオンにしてください。"; return; }
+    shared = stream;
+    start(audio);
+  } catch (e) { statusEl.textContent = "共有がキャンセルされました"; }
+};
+$("startMic").onclick = () => start(null);
+$("stop").onclick = stop;
+$("clearKnown").onclick = () => { known = new Set(); store.set("knownTerms", []); statusEl.textContent = "「もう知ってる」をリセットしました"; };
+$("addTerm").onclick = async () => {
+  const title = $("addTitle").value.trim(), body = $("addBody").value.trim();
+  if (!title || !body) { statusEl.textContent = "用語と解説の両方を入力してください"; return; }
+  const data = await postJSON("/glossary/add", { title, body, level: Number($("minLevel").value) }).catch(() => ({ error: "サーバーに接続できません" }));
+  statusEl.textContent = data.error ? data.error : `「${title}」を用語集に登録しました。次に出てきたら、この解説が表示されます。`;
+  if (!data.error) { $("addTitle").value = ""; $("addBody").value = ""; }
+};
+const trySend = () => { const v = $("tryText").value; liveEl.hidden = false; liveEl.textContent = v; handleUtterance(v); $("tryText").value = ""; };
+$("trySend").onclick = trySend;
+$("tryText").onkeydown = (e) => { if (e.key === "Enter" && !e.isComposing) trySend(); };
+</script>
+</body>
+</html>

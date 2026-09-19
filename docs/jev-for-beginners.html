@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jev 検証ノート</title>
+<style>
+  :root {
+    --ground: #F4F6F9;
+    --surface: #FFFFFF;
+    --ink: #17202B;
+    --sub: #566273;
+    --line: #DCE2EA;
+    --jev: #2B57D4;          /* Jev = 速い直感 */
+    --jev-soft: #E4EBFB;
+    --llm: #B26A00;          /* LLM = じっくり考える */
+    --llm-soft: #FBEFD9;
+    --good: #18794E;
+    --bad: #B93A32;
+    --track: #E6EAF0;
+    --font: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", "Noto Sans JP", Meiryo, system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11151B; --surface: #1A2029; --ink: #E7ECF3; --sub: #9AA7B8; --line: #2C3644;
+      --jev: #86A6FF; --jev-soft: #1E2A47; --llm: #F0B45A; --llm-soft: #3A2C12;
+      --good: #5CCB97; --bad: #F08A80; --track: #2A3340;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #11151B; --surface: #1A2029; --ink: #E7ECF3; --sub: #9AA7B8; --line: #2C3644;
+    --jev: #86A6FF; --jev-soft: #1E2A47; --llm: #F0B45A; --llm-soft: #3A2C12;
+    --good: #5CCB97; --bad: #F08A80; --track: #2A3340;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 16px/1.85 var(--font); padding-inline: 20px; -webkit-text-size-adjust: 100%; }
+  .page { max-width: 760px; margin-inline: auto; padding-block: 48px 72px; display: flex; flex-direction: column; gap: 56px; }
+  section { display: flex; flex-direction: column; gap: 20px; }
+  h1, h2, h3, p, ul, ol, figure { margin: 0; }
+  h1 { font-size: clamp(30px, 6vw, 44px); line-height: 1.25; font-weight: 800; letter-spacing: .01em; text-wrap: balance; }
+  h2 { font-size: 24px; line-height: 1.4; font-weight: 800; text-wrap: balance; padding-top: 8px; border-top: 3px solid var(--ink); }
+  h3 { font-size: 18px; line-height: 1.5; font-weight: 700; text-wrap: balance; }
+  p, li { max-width: 40em; }
+  .eyebrow { font-size: 13px; letter-spacing: .12em; color: var(--sub); font-weight: 700; }
+  .lead { font-size: 18px; color: var(--sub); }
+  .note { font-size: 14px; color: var(--sub); }
+  strong { font-weight: 700; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .jev { color: var(--jev); font-weight: 700; }
+  .llm { color: var(--llm); font-weight: 700; }
+  a { color: var(--jev); }
+
+  /* 冒頭の3点まとめ */
+  .summary { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .summary li { display: grid; grid-template-columns: 10px 1fr; gap: 14px; max-width: none; font-size: 17px; }
+  .summary li::before { content: ""; width: 10px; height: 10px; margin-top: .62em; background: var(--jev); border-radius: 2px; }
+
+  /* 2レーンの比較図 */
+  .lanes { display: flex; flex-direction: column; gap: 14px; }
+  .lane { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .lane-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .lane-head b { font-size: 16px; }
+  .time { font-family: var(--mono); font-size: 14px; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+  .lane.is-llm .time { background: var(--llm-soft); color: var(--llm); }
+  .lane.is-jev .time { background: var(--jev-soft); color: var(--jev); }
+  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+  .box { flex: 1 1 150px; border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.6; background: var(--ground); }
+  .box small { display: block; color: var(--sub); font-size: 12px; letter-spacing: .06em; }
+  .lane.is-llm .box.core { border-color: var(--llm); background: var(--llm-soft); }
+  .lane.is-jev .box.core { border-color: var(--jev); background: var(--jev-soft); }
+  .arrow { align-self: center; color: var(--sub); font-size: 18px; flex: 0 0 auto; }
+  @media (max-width: 560px) { .flow { flex-direction: column; } .box { flex: 0 0 auto; } .arrow { transform: rotate(90deg); } }
+
+  /* 表 */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; line-height: 1.6; min-width: 440px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  thead th { font-size: 13px; letter-spacing: .06em; color: var(--sub); background: var(--ground); }
+  th.c-llm { color: var(--llm); } th.c-jev { color: var(--jev); }
+
+  .callout { border-left: 4px solid var(--jev); padding: 4px 0 4px 16px; color: var(--ink); }
+  .callout p + p { margin-top: 10px; }
+
+  /* 渡すもの・返ってくるもの */
+  .io { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .io { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .panel h3 { font-size: 13px; letter-spacing: .1em; color: var(--sub); }
+  .quote { background: var(--ground); border-radius: 8px; padding: 10px 12px; font-size: 15px; line-height: 1.7; }
+  .opt { display: grid; grid-template-columns: 1.6em 1fr; font-size: 15px; line-height: 1.6; }
+  .opt b { font-family: var(--mono); color: var(--jev); }
+
+  /* 確率バー */
+  .bar-row { display: grid; grid-template-columns: 1.6em 1fr 3.2em; gap: 8px; align-items: center; font-size: 14px; }
+  .bar-row b { font-family: var(--mono); color: var(--jev); }
+  .track { height: 14px; background: var(--track); border-radius: 999px; overflow: hidden; display: flex; }
+  .fill { height: 100%; background: var(--jev); border-radius: 999px; }
+  .fill.muted { background: var(--sub); opacity: .55; }
+  .pct { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+  /* パイプライン */
+  .pipe { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0; counter-reset: step; }
+  .pipe li { max-width: none; display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding-bottom: 18px; position: relative; counter-increment: step; }
+  .pipe li::before { content: counter(step); width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: 14px; z-index: 1; }
+  .pipe li::after { content: ""; position: absolute; left: 16px; top: 34px; bottom: 0; width: 2px; background: var(--line); }
+  .pipe li:last-child { padding-bottom: 0; } .pipe li:last-child::after { display: none; }
+  .pipe li.is-jev::before { border-color: var(--jev); background: var(--jev); color: var(--surface); }
+  .pipe .who { font-size: 12px; letter-spacing: .08em; color: var(--sub); display: block; }
+  .pipe li.is-jev .who { color: var(--jev); font-weight: 700; }
+
+  /* 画面の再現 */
+  .mock { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .mock-title { font-size: 12px; letter-spacing: .1em; color: var(--sub); }
+  .heard { font-size: 14px; color: var(--sub); border-left: 3px solid var(--line); padding-left: 10px; }
+  .card { border: 1px solid var(--line); border-left: 4px solid var(--good); border-radius: 10px; padding: 10px 14px; background: var(--ground); }
+  .card .t { font-weight: 700; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .badge { font-size: 11px; font-weight: 400; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; color: var(--sub); }
+  .card p { font-size: 14px; line-height: 1.7; }
+  .verdict { font-size: 14px; font-weight: 700; }
+  .verdict.ok { color: var(--good); } .verdict.ng { color: var(--bad); }
+
+  /* 大きな数字 */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 560px) { .stats { grid-template-columns: 1fr; } }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .stat .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 700; line-height: 1.2; color: var(--jev); }
+  .stat .v small { font-size: 15px; font-family: var(--font); margin-left: 2px; }
+  .stat .l { font-size: 13px; color: var(--sub); line-height: 1.5; margin-top: 4px; }
+
+  /* 聞き方の比較 */
+  .cmp { display: flex; flex-direction: column; gap: 14px; }
+  .cmp-item { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .cmp-grid { grid-template-columns: 1fr; } }
+  .cmp-col { display: flex; flex-direction: column; gap: 6px; }
+  .cmp-col .h { font-size: 12px; letter-spacing: .08em; color: var(--sub); }
+  .line { display: grid; grid-template-columns: 4.6em 1fr 3.2em; gap: 8px; align-items: center; font-size: 13px; }
+
+  /* 分布の棒グラフ */
+  .chart { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 16px 14px; }
+  .bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-items: end; height: 170px; border-bottom: 2px solid var(--line); }
+  .bars .b { background: var(--jev); border-radius: 6px 6px 0 0; position: relative; min-height: 4px; }
+  .bars .b.low { background: var(--sub); opacity: .5; }
+  .bars .b span { position: absolute; top: -22px; left: 0; right: 0; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--ink); }
+  .xlabels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; font-family: var(--mono); font-size: 12px; color: var(--sub); text-align: center; padding-top: 6px; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 10px; line-height: 1.7; }
+
+  .pairs { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .pairs li { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 15px; }
+  .pairs .from { font-family: var(--mono); background: var(--track); border-radius: 6px; padding: 0 8px; }
+  .pairs .to { font-weight: 700; }
+
+  .use { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .use li { max-width: none; display: grid; grid-template-columns: 8px 1fr; gap: 14px; }
+  .use li::before { content: ""; background: var(--jev); border-radius: 4px; }
+  .use b { display: block; }
+
+  .duo { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: stretch; }
+  @media (max-width: 560px) { .duo { grid-template-columns: 1fr; } .duo .plus { justify-self: center; } }
+  .duo .role { border-radius: 12px; padding: 14px 16px; font-size: 15px; line-height: 1.7; }
+  .duo .role.l { background: var(--llm-soft); border: 1.5px solid var(--llm); }
+  .duo .role.j { background: var(--jev-soft); border: 1.5px solid var(--jev); }
+  .duo .plus { align-self: center; font-size: 22px; color: var(--sub); }
+
+  ol.tips { padding-left: 1.4em; display: flex; flex-direction: column; gap: 8px; }
+  footer { border-top: 1px solid var(--line); padding-top: 20px; display: flex; flex-direction: column; gap: 6px; }
+  footer p, footer li { font-size: 13px; color: var(--sub); line-height: 1.8; max-width: none; }
+  footer ul { padding-left: 1.2em; margin: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <section>
+      <p class="eyebrow">検証ノート ・ 2026年9月</p>
+      <h1>Jevって結局なに?<br>ツールを1本作って確かめてみた</h1>
+      <p class="lead">2026年9月に登場した新しいAIモデル「Jev(ジェブ)」。今までのAIと何が違うのかを、実際にツールに組み込んで試しました。AI駆動開発をしている人なら分かる言葉でまとめます。</p>
+      <ul class="summary">
+        <li><span><strong>Jevは文章を書かないAI。</strong>こちらが用意した選択肢から答えを選んで、その確率を返すだけ。</span></li>
+        <li><span>そのかわり、<strong>とても速くて(約0.5秒)、とても安い。</strong>ChatGPTやClaudeの数十〜数百分の1。</span></li>
+        <li><span>プログラムの中に置く「<strong>かしこいif文</strong>」だと思うと、しっくりくる。</span></li>
+      </ul>
+    </section>
+  </header>
+
+  <section>
+    <h2>今までのAI(LLM)と何が違うの?</h2>
+    <p>ChatGPTやClaudeのようなAI(LLM)は、<span class="llm">文章で考えて、文章で答えます</span>。Jevは、<span class="jev">選択肢から選んで、確率を返します</span>。作りがまったく違います。</p>
+
+    <div class="lanes">
+      <div class="lane is-llm">
+        <div class="lane-head"><b class="llm">今までのAI(LLM)</b><span class="time">数秒〜数分</span></div>
+        <div class="flow">
+          <div class="box"><small>渡すもの</small>「この『セッション』って、どういう意味で使われてる?」</div>
+          <span class="arrow">→</span>
+          <div class="box core"><small>AIの中</small>文章を1語ずつ書きながら考える</div>
+          <span class="arrow">→</span>
+          <div class="box"><small>返ってくるもの</small>「この文脈での『セッション』は、イベントの発表枠を指していると考えられます。なぜなら…」</div>
+        </div>
+      </div>
+      <div class="lane is-jev">
+        <div class="lane-head"><b class="jev">Jev</b><span class="time">約0.5秒</span></div>
+        <div class="flow">
+          <div class="box"><small>渡すもの</small>状況 + 質問 + <strong>選択肢 A / B</strong></div>
+          <span class="arrow">→</span>
+          <div class="box core"><small>AIの中</small>選択肢の中から、一度にパッと選ぶ</div>
+          <span class="arrow">→</span>
+          <div class="box"><small>返ってくるもの</small><span class="num">A: 2% / B: 98%</span><br>これだけ。文章は1文字も返ってこない</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th class="c-llm">今までのAI(LLM)</th><th class="c-jev">Jev</th></tr></thead>
+        <tbody>
+          <tr><td>答え方</td><td>文章を書く</td><td>選択肢から選ぶ(+確率)</td></tr>
+          <tr><td>たとえるなら</td><td>じっくり相談に乗ってくれる先輩</td><td>一瞬で仕分ける改札機や仕分け係</td></tr>
+          <tr><td>得意</td><td>考える・説明する・作る</td><td>分類する・判定する・選ぶ</td></tr>
+          <tr><td>できないこと</td><td>―</td><td>文章を書く、説明する、コードを書く</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p>開発元のTypeSafe AIは、心理学の言葉を借りて説明しています。人間の頭には、<strong>パッと直感で判断する「システム1」</strong>と、<strong>じっくり考える「システム2」</strong>がある。今までのAIはシステム2、Jevはシステム1だ、と。</p>
+      <p>熱いやかんに触って手を引っ込めるのに、じっくり考える人はいません。プログラムの中にも「考えなくていいから、速く・安く・確実に判定してほしい」場面がたくさんあります。Jevは、そこを担当するAIです。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Jevには何を渡して、何が返ってくるの?</h2>
+    <p>渡すものは、<strong>状況</strong>と、<strong>質問と答えの選択肢</strong>の2つだけです。実際に試した例です。</p>
+    <div class="io">
+      <div class="panel">
+        <h3>渡すもの</h3>
+        <div class="quote">「それでは次のセッションに移りたいと思います。スポンサーのご紹介です」</div>
+        <p style="font-size:15px">この「セッション」は、どちらの意味?</p>
+        <div class="opt"><b>A</b><span>AIツールとのひと続きの会話</span></div>
+        <div class="opt"><b>B</b><span>イベントや勉強会の発表枠</span></div>
+      </div>
+      <div class="panel">
+        <h3>返ってくるもの</h3>
+        <div class="bar-row"><b>A</b><div class="track"><div class="fill muted" style="width:2%"></div></div><span class="pct">2%</span></div>
+        <div class="bar-row"><b>B</b><div class="track"><div class="fill" style="width:98%"></div></div><span class="pct">98%</span></div>
+        <p class="note">文章ではなく数字で返ってくるので、プログラムでそのまま <span class="num">if (B &gt; 0.5)</span> のように使えます。「JSONで返してと頼んだのに、余計な前置きがついてきた」が、仕組み上起きません。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>作ってみたツール: リアルタイム技術用語ガイド</h2>
+    <p>勉強会や学習動画を聞いていて、<strong>知らない用語が出てきて、そこから先の話に置いていかれた</strong>経験はありませんか。それを助けるツールを作りました。聞きながら開いておくと、出てきた技術用語のひとこと解説が流れてきます。</p>
+
+    <ol class="pipe">
+      <li><div><span class="who">Chromeの機能</span>勉強会(Zoomのブラウザ版)や動画(YouTube)を再生しているタブの音声を、文字起こしする</div></li>
+      <li><div><span class="who">ふつうのプログラム(Python)</span>出てきた言葉を、用語集(約1,370語)から探す</div></li>
+      <li class="is-jev"><div><span class="who">ここだけJev</span><strong>紛らわしい言葉だけ</strong>、「技術用語として使われた? それとも日常語?」と聞く</div></li>
+      <li><div><span class="who">ふつうのプログラム</span>技術用語だったら、ひとこと解説のカードを画面に出す。「もう知ってる」を押した用語は、もう出さない</div></li>
+    </ol>
+
+    <div class="io">
+      <div class="mock">
+        <span class="mock-title">聞こえてきた言葉</span>
+        <p class="heard">「このスキルはプラグインとして配布していて、サブエージェントから呼び出せます」</p>
+        <p class="verdict ok">Jevの判定: 技術用語 100% → 解説を出す</p>
+        <div class="card">
+          <div class="t">スキル (Agent Skills)<span class="badge">中級</span></div>
+          <p>AIに「この作業はこの手順で」と教えておく指示書のパッケージ。人間の能力の意味のスキルとは別物。</p>
+        </div>
+      </div>
+      <div class="mock">
+        <span class="mock-title">聞こえてきた言葉</span>
+        <p class="heard">「彼はプレゼンのスキルが高いので、転職エージェントにも評価されてました」</p>
+        <p class="verdict ng">Jevの判定: 日常語 100% → 何も出さない</p>
+        <p class="note">「スキル」も「エージェント」も用語集にある言葉ですが、ここでは人の能力と転職サービスの話。文字の一致だけでは見分けられず、かといってLLMに毎回聞くほどでもない。Jevにちょうどいい仕事でした。</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v">約3<small>円</small></div><div class="l">2時間の勉強会を聞いたときの、Jevの利用料(約$0.02)</div></div>
+      <div class="stat"><div class="v">0.5<small>秒</small></div><div class="l">1回の判定にかかった時間(日本から利用。中央値)</div></div>
+      <div class="stat"><div class="v">1<small>回</small></div><div class="l">1つの発言につきJevを呼ぶ回数。質問は何個でもまとめて聞ける</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>実験して分かった4つのこと</h2>
+
+    <h3>分かったこと(1) 聞き方で、答えのキレが変わる</h3>
+    <p>同じ内容でも、「はい/いいえ」で聞くより、「AとBのどっち?」で聞くほうが、はっきり答えてくれます。</p>
+    <div class="cmp">
+      <div class="cmp-item">
+        <p class="heard">「このスキルはプラグインとして配布していて…」<span class="note"> ― 正解は「技術用語」</span></p>
+        <div class="cmp-grid">
+          <div class="cmp-col"><span class="h">「はい/いいえ」で聞いた</span>
+            <div class="line"><span>はい</span><div class="track"><div class="fill muted" style="width:69%"></div></div><span class="pct">69%</span></div></div>
+          <div class="cmp-col"><span class="h">「どっち?」で聞いた</span>
+            <div class="line"><span>技術用語</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="pct">100%</span></div></div>
+        </div>
+      </div>
+      <div class="cmp-item">
+        <p class="heard">「次のセッションに移ります。スポンサーのご紹介です」<span class="note"> ― 正解は「日常語」</span></p>
+        <div class="cmp-grid">
+          <div class="cmp-col"><span class="h">「はい/いいえ」で聞いた</span>
+            <div class="line"><span>はい</span><div class="track"><div class="fill muted" style="width:36%"></div></div><span class="pct">36%</span></div></div>
+          <div class="cmp-col"><span class="h">「どっち?」で聞いた</span>
+            <div class="line"><span>日常語</span><div class="track"><div class="fill" style="width:98%"></div></div><span class="pct">98%</span></div></div>
+        </div>
+      </div>
+    </div>
+    <p>Jevは、質問を<strong>字面どおりに</strong>読みます。空気を読んで察することはしません。だから、<strong>比べる相手をこちらが言葉にして渡す</strong>のがコツです。</p>
+
+    <h3>分かったこと(2) とにかく量をさばける</h3>
+    <p>ためしに、用語集の全部(1,374語)について、2時間の勉強会の全発言に「この用語、出てきた?」と総当たりで聞いてみました。</p>
+    <div class="stats">
+      <div class="stat"><div class="v">約50<small>万回</small></div><div class="l">判定の数</div></div>
+      <div class="stat"><div class="v">約4<small>分</small></div><div class="l">かかった時間(227秒)</div></div>
+      <div class="stat"><div class="v">約290<small>円</small></div><div class="l">かかったお金($1.90)</div></div>
+    </div>
+    <p>LLMで同じことをやったら、時間もお金も現実的ではありません。これがJevの一番の強みです。</p>
+
+    <h3>分かったこと(3) 聞き間違いに強い。でも万能ではない</h3>
+    <p>総当たりで聞くと、音声認識の聞き間違いまで拾ってくれました。</p>
+    <ul class="pairs">
+      <li><span class="from">フラバナ</span><span>→</span><span class="to">Grafana</span></li>
+      <li><span class="from">Gitッハブコパルト</span><span>→</span><span class="to">GitHub Copilot</span></li>
+      <li><span class="from">PYON</span><span>→</span><span class="to">Python</span></li>
+    </ul>
+    <p>一方で、「はい/いいえ」の総当たりだと、答えの確率が50〜90%あたりに固まってしまいました。</p>
+    <figure class="chart">
+      <div class="bars">
+        <div class="b low" style="height:97%"><span>226</span></div>
+        <div class="b low" style="height:75%"><span>174</span></div>
+        <div class="b" style="height:96%"><span>223</span></div>
+        <div class="b" style="height:100%"><span>233</span></div>
+        <div class="b" style="height:11%"><span>26</span></div>
+      </div>
+      <div class="xlabels"><span>50〜60%</span><span>60〜70%</span><span>70〜80%</span><span>80〜90%</span><span>90%以上</span></div>
+      <figcaption>「はい」の確率が50%以上だった判定の件数。「90%以上」と言い切れたのは26件だけ。線を70%に引くと、はっきり出てきている「スキル」を見逃し、50%まで下げると、話に出ていない用語が混ざりました。</figcaption>
+    </figure>
+    <p>結局、<strong>「プログラムで探せるものはプログラムで探して、迷うところだけJevに聞く」のがいちばん良かった</strong>、というのが今回の結論です。総当たりは、録画を1本流して聞き間違いのパターンを集める、といった「たまにやる調査」に向いています。</p>
+
+    <h3>分かったこと(4) 正直なところ、Jevじゃなくてもできた</h3>
+    <p>同じ判定をClaudeのHaiku(小さくて速いモデル)にやらせてみたら、<strong>同じようにできました</strong>。しかもHaikuなら、解説文まで一緒に書いてくれます。Jevは文章を書けないので、解説は用語集として先に用意しておく必要があります。</p>
+    <p>今回のツールは「1人が、数秒遅れても困らない頻度で使う」ものなので、Jevの速さと安さは、実は決め手になりませんでした。</p>
+  </section>
+
+  <section>
+    <h2>じゃあ、Jevはどんなときに使うといいの?</h2>
+    <ul class="use">
+      <li><div><b>一瞬の判断がほしい</b>入力中のフォーム、ゲーム、音声のやり取りなど、0.1〜0.5秒で答えがほしい場面</div></li>
+      <li><div><b>ものすごい回数を判定したい</b>何十万件のデータの分類、全ログのチェックなど</div></li>
+      <li><div><b>答えの形が壊れると困る</b>プログラムがそのまま使うので、決まった選択肢以外が返ってきては困る場面</div></li>
+    </ul>
+    <p>逆に、説明してほしい・考えてほしい・作ってほしいなら、今までどおりLLMの出番です。どちらかを選ぶものではなく、組み合わせて使うものだと思うのがよさそうです。</p>
+    <div class="duo">
+      <div class="role l"><b class="llm">LLMに考えさせて</b><br>設計する、説明する、コードを書く、用語集の解説を書く</div>
+      <span class="plus">+</span>
+      <div class="role j"><b class="jev">Jevに仕分けさせる</b><br>分類する、振り分ける、チェックする、どっちの意味か決める</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>使うときのコツ</h2>
+    <ol class="tips">
+      <li>「はい/いいえ」より「<strong>AとBのどっち?</strong>」で聞く</li>
+      <li>1つの質問では、<strong>1つのことだけ</strong>聞く</li>
+      <li>「文章の中から用語を抜き出して」はできない。<strong>候補はプログラムで作って、Jevには選ばせる</strong></li>
+      <li>プログラムで決められることは、<strong>先にプログラムで決める</strong></li>
+      <li>質問はたくさん並べても遅くならない。<strong>まとめて聞く</strong></li>
+    </ol>
+  </section>
+
+  <footer>
+    <p><strong>数字の出どころ</strong></p>
+    <ul>
+      <li>速さ(約0.5秒)・料金・判定の数は、すべて今回の実験での実測です(2026年9月、日本から利用、モデルは jev-1.13)。</li>
+      <li>開発元の公称では、応答は70〜500ミリ秒、料金は入力100万トークンあたり$0.042・出力は無料です。</li>
+      <li>Jevは2026年9月時点で早期アクセス(申し込み制)です。公式ドキュメント: docs.typesafe.ai</li>
+      <li>円換算は1ドル=約150円で計算しています。</li>
+    </ul>
+  </footer>
+
+</div>
+</body>
+</html>
